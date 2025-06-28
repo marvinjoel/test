@@ -5,15 +5,15 @@
   </record>
   <record id="falabella_token" model="ir.config_parameter">
     <field name="key">falabella.token</field>
-    <field name="value">TU_TOKEN_AQUÍ</field>
+    <field name="value">TOKEN---------------------</field>
   </record>
 
-    <record id="ir_cron_sync_falabella_products" model="ir.cron">
+  <record id="ir_cron_sync_falabella_products" model="ir.cron">
     <field name="name">Sincronizar Productos con Falabella</field>
-    <field name="model_id" ref="base.model_ir_cron"/>
+    <field name="model_id" ref="model_falabella_cron"/>
     <field name="state">code</field>
-    <field name="code">model.env['falabella.cron'].sync_all_products()</field>
-    <field name="interval_number">10</field>
+    <field name="code">model.run_price_name_sync()</field>
+    <field name="interval_number">5</field>
     <field name="interval_type">minutes</field>
     <field name="numbercall">-1</field>
     <field name="active">True</field>
