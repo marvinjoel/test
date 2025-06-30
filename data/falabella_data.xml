@@ -1,22 +1,28 @@
 <odoo>
-  <record id="falabella_params" model="ir.config_parameter">
-    <field name="key">falabella.user</field>
-    <field name="value">sistemasghlperu@gmail.com</field>
-  </record>
-  <record id="falabella_token" model="ir.config_parameter">
-    <field name="key">falabella.token</field>
-    <field name="value">TOKEN---------------------</field>
-  </record>
+    <record id="model_falabella_cron" model="ir.model">
+        <field name="name">Falabella Cron</field>
+        <field name="model">falabella.cron</field>
+        <field name="module">falabella_sync</field>
+        <field name="transient">False</field>
+    </record>
 
-  <record id="ir_cron_sync_falabella_products" model="ir.cron">
-    <field name="name">Sincronizar Productos con Falabella</field>
-    <field name="model_id" ref="model_falabella_cron"/>
-    <field name="state">code</field>
-    <field name="code">model.run_price_name_sync()</field>
-    <field name="interval_number">5</field>
-    <field name="interval_type">minutes</field>
-    <field name="numbercall">-1</field>
-    <field name="active">True</field>
-  </record>
+    <record id="falabella_params" model="ir.config_parameter">
+        <field name="key">falabella.user</field>
+        <field name="value">sistemasghlperu@gmail.com</field>
+    </record>
+    <record id="falabella_token" model="ir.config_parameter">
+        <field name="key">falabella.token</field>
+        <field name="value">8f46acb7b9c525d6f9464c9a8b9b8f7c425051c3</field>
+    </record>
 
+    <record id="ir_cron_sync_falabella" model="ir.cron">
+        <field name="name">Sync Products with Falabella</field>
+        <field name="model_id" ref="model_falabella_cron"/>
+        <field name="state">code</field>
+        <field name="code">model.run_price_name_sync()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+    </record>
 </odoo>
