@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="model_x_falabella_cron" model="ir.model">
+            <field name="name">Falabella Cron Job Model</field>
+            <field name="model">x_falabella.cron</field>
+            <field name="transient">False</field>
+            </record>
+    </data>
+</odoo>

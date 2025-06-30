@@ -1,10 +1,4 @@
 <odoo>
-    <record id="model_falabella_cron" model="ir.model">
-        <field name="name">Falabella Cron</field>
-        <field name="model">x_falabella.cron</field>
-        <field name="transient">False</field>
-    </record>
-
     <record id="falabella_params" model="ir.config_parameter">
         <field name="key">falabella.user</field>
         <field name="value">sistemasghlperu@gmail.com</field>
@@ -16,7 +10,7 @@
 
     <record id="ir_cron_sync_falabella" model="ir.cron">
         <field name="name">Sync Products with Falabella</field>
-        <field name="model_id" ref="model_falabella_cron"/>
+        <field name="model_id" ref="model_x_falabella_cron"/>
         <field name="state">code</field>
         <field name="code">model.run_price_name_sync()</field>
         <field name="interval_number">5</field>
