@@ -1,7 +1,7 @@
 {
     'name': 'Falabella Integration',
     'version': '15.0.1.0.0',
-    'depends': ['product', 'base', 'sale'],
+    'depends': ['product', 'base', 'sale', 'stock'],
     'data': [
         'data/falabella_data.xml',
         'security/ir.model.access.csv'

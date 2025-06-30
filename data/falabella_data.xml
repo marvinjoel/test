@@ -1,8 +1,7 @@
 <odoo>
     <record id="model_falabella_cron" model="ir.model">
         <field name="name">Falabella Cron</field>
-        <field name="model">falabella.cron</field>
-        <field name="module">falabella_sync</field>
+        <field name="model">x_falabella.cron</field>
         <field name="transient">False</field>
     </record>
 
