@@ -8,14 +8,14 @@
         <field name="value">8f46acb7b9c525d6f9464c9a8b9b8f7c425051c3</field>
     </record>
 
-    <record id="ir_cron_sync_falabella" model="ir.cron">
-        <field name="name">Sync Products with Falabella</field>
-        <field name="model_id" ref="model_x_falabella_cron"/>
-        <field name="state">code</field>
-        <field name="code">model.run_price_name_sync()</field>
-        <field name="interval_number">5</field>
-        <field name="interval_type">minutes</field>
-        <field name="numbercall">-1</field>
-        <field name="active">True</field>
-    </record>
+<!--    <record id="ir_cron_sync_falabella" model="ir.cron">-->
+<!--        <field name="name">Sync Products with Falabella</field>-->
+<!--        <field name="model_id" ref="base.model_product_template"/>-->
+<!--        <field name="state">code</field>-->
+<!--        <field name="code">env['product.template'].run_price_name_sync()</field>-->
+<!--        <field name="interval_number">5</field>-->
+<!--        <field name="interval_type">minutes</field>-->
+<!--        <field name="numbercall">-1</field>-->
+<!--        <field name="active">True</field>-->
+<!--    </record>-->
 </odoo>

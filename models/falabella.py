@@ -73,3 +73,11 @@ class ProductTemplate(models.Model):
             except Exception as e:
                 _logger.error("Exception syncing %s: %s", prod.name, str(e))
         _logger.info("Finished sync with Falabella for %s products", len(self))
+
+    def action_sync_with_falabella(self):
+        _logger.info("Manual sync triggered for product %s", self.name)
+        self.sync_to_falabella()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
