@@ -15,6 +15,8 @@ class ProductTemplate(models.Model):
 
     @api.model
     def _falabella_signature(self, params):
+        print("===================== inicializa la sincronizacion ========================")
+        print(params)
         _logger.info("Generating signature for params: %s", params)
         secret = self.env['ir.config_parameter'].sudo().get_param('falabella.token')
         if not secret:
@@ -34,6 +36,7 @@ class ProductTemplate(models.Model):
         base = self.env['ir.config_parameter'].sudo()
         user = base.get_param('falabella.user')
         token = base.get_param('falabella.token')
+
         if not user or not token:
             _logger.error("Missing Falabella credentials - User: %s, Token: %s", user, token)
             return
@@ -43,6 +46,7 @@ class ProductTemplate(models.Model):
             _logger.info("Syncing product: %s (ID: %s, SKU: %s)", prod.name, prod.id, prod.default_code or str(prod.id))
             try:
                 stock_qty = sum(prod.quant_ids.mapped('quantity'))
+                timestamp = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                 params = {
                     'Action': 'UpdateProducts',
                     'UserID': user,
@@ -50,19 +54,22 @@ class ProductTemplate(models.Model):
                     'Name': prod.name,
                     'Price': str(prod.list_price),
                     'Quantity': str(int(stock_qty)),
-                    'Timestamp': time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                    'Timestamp': timestamp,
                     'Format': 'JSON',
                     'Version': '1.0'
                 }
-                _logger.debug("Params sent to Falabella: %s", params)
 
                 params['Signature'] = self._falabella_signature(params)
+
                 if not params['Signature']:
                     _logger.error("Failed to generate signature for product %s", prod.name)
                     continue
 
+                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
                 _logger.info("Sending request to Falabella for product %s", prod.name)
-                resp = requests.post(url, json=params)
+                resp = requests.post(url, data=params, headers=headers)
+
                 _logger.debug("Falabella response - Code: %s, Body: %s", resp.status_code, resp.text)
 
                 if resp.ok:
