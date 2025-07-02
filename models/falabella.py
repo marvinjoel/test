@@ -15,8 +15,6 @@ class ProductTemplate(models.Model):
 
     @api.model
     def _falabella_signature(self, params):
-        print("===================== inicializa la sincronizacion ========================")
-        print(params)
         _logger.info("Generating signature for params: %s", params)
         secret = self.env['ir.config_parameter'].sudo().get_param('falabella.token')
         if not secret:
@@ -45,7 +43,7 @@ class ProductTemplate(models.Model):
         for prod in self:
             _logger.info("Syncing product: %s (ID: %s, SKU: %s)", prod.name, prod.id, prod.default_code or str(prod.id))
             try:
-                stock_qty = sum(prod.quant_ids.mapped('quantity'))
+                stock_qty = prod.qty_available
                 timestamp = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                 params = {
                     'Action': 'UpdateProducts',
