@@ -37,18 +37,35 @@ class ProductTemplate(models.Model):
 
         if not user or not token:
             _logger.error("Missing Falabella credentials - User: %s, Token: %s", user, token)
-            return
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': 'Missing Falabella credentials. Please check system parameters.',
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
 
         url = "https://sellercenter-api.falabella.com/"
         for prod in self:
             _logger.info("Syncing product: %s (ID: %s, SKU: %s)", prod.name, prod.id, prod.default_code or str(prod.id))
             try:
-                stock_qty = prod.qty_available
+                product_variants = self.env['product.product'].search([('product_tmpl_id', '=', prod.id)], limit=1)
+                if not product_variants:
+                    _logger.error("No variants found for product %s", prod.name)
+                    continue
+
+                variant = product_variants[0]
+                stock_qty = variant.qty_available
+                sku = variant.default_code or str(variant.id)
+
                 timestamp = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                 params = {
                     'Action': 'UpdateProducts',
                     'UserID': user,
-                    'SKU': prod.default_code or str(prod.id),
+                    'SKU': sku,
                     'Name': prod.name,
                     'Price': str(prod.list_price),
                     'Quantity': str(int(stock_qty)),
