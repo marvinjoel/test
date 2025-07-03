@@ -80,7 +80,11 @@ class ProductTemplate(models.Model):
                     _logger.error("Failed to generate signature for product %s", prod.name)
                     continue
 
-                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'SC4ACDC/Python/3.9.2/PROPIA/FAPE',
+                    'Accept': 'application/json',
+                }
 
                 _logger.info("Sending request to Falabella for product %s", prod.name)
                 resp = requests.post(url, data=params, headers=headers)
@@ -93,7 +97,7 @@ class ProductTemplate(models.Model):
                 else:
                     _logger.error("Error syncing %s: Code %s, Response: %s", prod.name, resp.status_code, resp.text)
             except Exception as e:
-                _logger.error("Exception syncing %s: %s", prod.name, str(e))
+                _logger.error("Sincronización de excepciones: %s: %s", prod.name, str(e))
         _logger.info("Finished sync with Falabella for %s products", len(self))
 
     def action_sync_with_falabella(self):
