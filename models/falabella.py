@@ -16,8 +16,8 @@ class ProductTemplate(models.Model):
     fb_last_sync = fields.Datetime(string="Last Sync with Falabella", readonly=True)
 
     @api.model
-    def _falabella_signature(self, params):
-        _logger.info("Generating signature for params: %s", params)
+    def _falabella_signature(self, params, xml_body):
+        _logger.info("Generating signature for params: %s and XML body: %s", params, xml_body)
         secret = self.env['ir.config_parameter'].sudo().get_param('falabella.token')
         if not secret:
             _logger.error("No token found for Falabella")
@@ -27,8 +27,10 @@ class ProductTemplate(models.Model):
             encoded_params = [f"{urllib.parse.quote(k, safe='')}"
                              f"={urllib.parse.quote(v, safe='')}" for k, v in sorted_params]
             concatenated = '&'.join(encoded_params)
-            _logger.debug("Signature Payload (concatenated and URL-encoded): %s", concatenated)
-            signature = HMAC(secret.encode('utf-8'), concatenated.encode('utf-8'), sha256).hexdigest()
+            xml_content = ET.tostring(ET.fromstring(xml_body), encoding='utf-8', method='xml').decode('utf-8')
+            payload = f"{concatenated}{xml_content}"
+            _logger.debug("Signature Payload (concatenated and URL-encoded with XML): %s", payload)
+            signature = HMAC(secret.encode('utf-8'), payload.encode('utf-8'), sha256).hexdigest()
             _logger.info("Signature generated: %s", signature)
             return signature
         except Exception as e:
@@ -58,7 +60,7 @@ class ProductTemplate(models.Model):
         seller_id_ua = 'SC4ACDC'
         python_version_ua = '3.9.2'
         integration_type_ua = 'PROPIA'
-        country_code_ua = 'FAPE'
+        country_code_ua = 'fape'
 
         headers = {
             'Content-Type': 'application/xml',
@@ -96,18 +98,18 @@ class ProductTemplate(models.Model):
                     'Format': 'XML'
                 }
 
-                params['Signature'] = self._falabella_signature(params)
-
                 request_root = ET.Element('Request')
                 product_node = ET.SubElement(request_root, 'Product')
                 ET.SubElement(product_node, 'SellerSku').text = sku
                 ET.SubElement(product_node, 'Price').text = str(prod.list_price)
+                ET.SubElement(product_node, 'SalePrice').text = str(prod.list_price)
                 business_units = ET.SubElement(product_node, 'BusinessUnits')
                 business_unit = ET.SubElement(business_units, 'BusinessUnit')
                 ET.SubElement(business_unit, 'OperatorCode').text = country_code_ua
                 ET.SubElement(business_unit, 'Stock').text = str(int(stock_qty))
 
                 xml_body = ET.tostring(request_root, encoding='UTF-8', xml_declaration=True).decode('utf-8')
+                params['Signature'] = self._falabella_signature(params, xml_body)
 
                 query_string = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
                 full_url = f"{url_base}?{query_string}"
