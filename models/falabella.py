@@ -1,10 +1,12 @@
 from odoo import models, fields, api
 from dateutil.relativedelta import relativedelta
+from datetime import datetime, timezone
 import requests
-import time
-import hashlib
-import hmac
+import urllib.parse
+from hmac import HMAC
+from hashlib import sha256
 import logging
+import xml.etree.ElementTree as ET
 
 _logger = logging.getLogger(__name__)
 
@@ -21,8 +23,12 @@ class ProductTemplate(models.Model):
             _logger.error("No token found for Falabella")
             return False
         try:
-            payload = ''.join(f"{k}{params[k]}" for k in sorted(params))
-            signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+            sorted_params = sorted((k, v) for k, v in params.items() if k != 'Signature')
+            encoded_params = [f"{urllib.parse.quote(k, safe='')}"
+                             f"={urllib.parse.quote(v, safe='')}" for k, v in sorted_params]
+            concatenated = '&'.join(encoded_params)
+            _logger.debug("Signature Payload (concatenated and URL-encoded): %s", concatenated)
+            signature = HMAC(secret.encode('utf-8'), concatenated.encode('utf-8'), sha256).hexdigest()
             _logger.info("Signature generated: %s", signature)
             return signature
         except Exception as e:
@@ -48,8 +54,19 @@ class ProductTemplate(models.Model):
                 }
             }
 
-        url = "https://sellercenter-api.falabella.com/"
-        for prod in self:
+        url_base = "https://sellercenter-api.falabella.com/"
+        seller_id_ua = 'SC4ACDC'
+        python_version_ua = '3.9.2'
+        integration_type_ua = 'PROPIA'
+        country_code_ua = 'FAPE'
+
+        headers = {
+            'Content-Type': 'application/xml',
+            'User-Agent': f'{seller_id_ua}/Python/{python_version_ua}/{integration_type_ua}/{country_code_ua}',
+            'Accept': 'application/xml',
+        }
+
+        for prod in self[:5]:
             _logger.info("Syncing product: %s (ID: %s, SKU: %s)", prod.name, prod.id, prod.default_code or str(prod.id))
             try:
                 product_variants = self.env['product.product'].search([('product_tmpl_id', '=', prod.id)], limit=1)
@@ -58,36 +75,51 @@ class ProductTemplate(models.Model):
                     continue
 
                 variant = product_variants[0]
-                stock_qty = variant.qty_available
+                warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
+                if not warehouse:
+                    warehouse = self.env['stock.warehouse'].search([], limit=1)
+                    if not warehouse:
+                        _logger.error(
+                            "No warehouse found to calculate stock for product %s. Please ensure you have at least one warehouse configured in Odoo.",
+                            prod.name)
+                        continue
+
+                stock_qty = variant.with_context(warehouse=warehouse.id).qty_available
                 sku = variant.default_code or str(variant.id)
 
-                timestamp = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
                 params = {
-                    'Action': 'UpdateProducts',
+                    'Action': 'ProductUpdate',
                     'UserID': user,
-                    'SKU': sku,
-                    'Name': prod.name,
-                    'Price': str(prod.list_price),
-                    'Quantity': str(int(stock_qty)),
                     'Timestamp': timestamp,
-                    'Format': 'JSON',
-                    'Version': '1.0'
+                    'Version': '1.0',
+                    'Format': 'XML'
                 }
 
                 params['Signature'] = self._falabella_signature(params)
 
-                if not params['Signature']:
-                    _logger.error("Failed to generate signature for product %s", prod.name)
-                    continue
+                request_root = ET.Element('Request')
+                product_node = ET.SubElement(request_root, 'Product')
+                ET.SubElement(product_node, 'SellerSku').text = sku
+                ET.SubElement(product_node, 'Price').text = str(prod.list_price)
+                business_units = ET.SubElement(product_node, 'BusinessUnits')
+                business_unit = ET.SubElement(business_units, 'BusinessUnit')
+                ET.SubElement(business_unit, 'OperatorCode').text = country_code_ua
+                ET.SubElement(business_unit, 'Stock').text = str(int(stock_qty))
 
-                headers = {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'User-Agent': 'SC4ACDC/Python/3.9.2/PROPIA/FAPE',
-                    'Accept': 'application/json',
-                }
+                xml_body = ET.tostring(request_root, encoding='UTF-8', xml_declaration=True).decode('utf-8')
 
-                _logger.info("Sending request to Falabella for product %s", prod.name)
-                resp = requests.post(url, data=params, headers=headers)
+                query_string = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+                full_url = f"{url_base}?{query_string}"
+
+                _logger.info("Sending request to Falabella for product %s. Full URL: %s", prod.name, full_url)
+                _logger.debug("Request Headers: %s", headers)
+                _logger.debug("Request XML Body: %s", xml_body)
+
+                import time
+                time.sleep(5)
+
+                resp = requests.post(full_url, data=xml_body.encode('utf-8'), headers=headers)
 
                 _logger.debug("Falabella response - Code: %s, Body: %s", resp.status_code, resp.text)
 
@@ -97,7 +129,8 @@ class ProductTemplate(models.Model):
                 else:
                     _logger.error("Error syncing %s: Code %s, Response: %s", prod.name, resp.status_code, resp.text)
             except Exception as e:
-                _logger.error("Sincronización de excepciones: %s: %s", prod.name, str(e))
+                _logger.error("Synchronization exception for %s: %s", prod.name, str(e))
+                continue
         _logger.info("Finished sync with Falabella for %s products", len(self))
 
     def action_sync_with_falabella(self):

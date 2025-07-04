@@ -1,7 +1,7 @@
 <odoo>
     <record id="falabella_params" model="ir.config_parameter">
         <field name="key">falabella.user</field>
-        <field name="value">sistemasghlperu@gmail.com</field>
+        <field name="value">ventasghlperu@gmail.com</field>
     </record>
     <record id="falabella_token" model="ir.config_parameter">
         <field name="key">falabella.token</field>
